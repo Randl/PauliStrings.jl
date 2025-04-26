@@ -284,6 +284,31 @@ function compile(c::Circuit)
 end
 
 
+"""
+    commute(c::Circuit, O::Operator; heisenberg=true, M=2^20, keep::Operator = Operator(0))
+
+Commute an operator `O` through the circuit `c`.
+"""
+function commute(c::Circuit, O::Operator; heisenberg=true, M=2^20, keep::Operator = Operator(0))
+    O_curr = O
+    if heisenberg
+        gates = reverse(c.gates)
+    else
+        gates = c.gates
+    end
+    for (gate, sites, args) in gates
+        if gate == "Noise"
+            O_curr = add_noise(O_curr, c.noise_amplitude)
+        elseif gate in allowed_gates
+            circuit_op = eval(Symbol(gate * "Gate"))(c.N, sites..., args...)
+            O_curr = commutator(circuit_op, O_curr)
+            O_curr = trim(O_curr, M; keep = keep)
+        else
+            error("Unknown gate: $gate")
+        end
+    end
+    return O_curr
+end
 
 
 end
