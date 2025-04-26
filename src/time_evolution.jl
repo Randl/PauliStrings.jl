@@ -33,19 +33,23 @@ function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=true, 
 end
 
 """
-    rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
+    rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, itime=false, M=2^20, keep::Operator=Operator(0))
 
 Single step of Runge–Kutta-4 with time dependant Hamiltonian.
 `H` is a function that takes a number (time) and returns an operator.
 """
-function rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=true)
+function rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real = 1, heisenberg = true, itime = false, M = 2^20, keep::Operator = Operator(0))
     s = -1im
     heisenberg && (s *= -1)
     itime && (s *= 1im)
-    k1 = s / hbar * commutator(H(t), O)
-    k2 = s / hbar * commutator(H(t + dt / 2), O + dt * k1 / 2)
-    k3 = s / hbar * commutator(H(t + dt / 2), O + dt * k2 / 2)
-    k4 = s / hbar * commutator(H(t + dt), O + dt * k3)
+    k1 = f_unitary(H(t), O, s, hbar)
+    k1 = trim(k1, M; keep = keep)
+    k2 = f_unitary(H(t + dt / 2), O + dt * k1 / 2O, s, hbar)
+    k2 = trim(k2, M; keep = keep)
+    k3 = f_unitary(H(t + dt / 2), O + dt * k2 / 2, s, hbar)
+    k3 = trim(k3, M; keep = keep)
+    k4 = f_unitary(H(t + dt), O + dt * k3, s, hbar)
+    k4 = trim(k4, M; keep = keep)
     return O + (k1 + 2 * k2 + 2 * k3 + k4) * dt / 6
 end
 
